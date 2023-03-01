@@ -10,5 +10,38 @@
       <Filter>ImGui</Filter>
     </ClCompile>
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Core\Window.cpp" />
+    <ClCompile Include="src\ImGui\ImGuiManager.cpp" />
+    <ClCompile Include="src\TestApp.cpp" />
+    <ClCompile Include="src\Rendering\DXError\dxerr.cpp" />
+    <ClCompile Include="src\Utils\TextReader.cpp" />
+    <ClCompile Include="src\Utils\BasicMesh.cpp" />
+    <ClCompile Include="src\Event\Input.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\Core\NativeWindow.h" />
+    <ClInclude Include="src\Core\Window.h" />
+    <ClInclude Include="src\Event\Event.h" />
+    <ClInclude Include="src\Event\KeyCodes.h" />
+    <ClInclude Include="src\Event\MouseCodes.h" />
+    <ClInclude Include="src\Event\ApplicationEvent.h" />
+    <ClInclude Include="src\Event\KeyEvent.h" />
+    <ClInclude Include="src\Event\MouseEvent.h" />
+    <ClInclude Include="src\Core\GMException.h" />
+    <ClInclude Include="src\ImGui\ImGuiManager.h" />
+    <ClInclude Include="src\TestApp.h" />
+    <ClInclude Include="src\Rendering\DXError\dxerr.h" />
+    <ClInclude Include="src\Math\Types.h" />
+    <ClInclude Include="src\Math\Operators.h" />
+    <ClInclude Include="src\Math\Functions.h" />
+    <ClInclude Include="src\Utils\TextReader.h" />
+    <ClInclude Include="src\Utils\BasicMesh.h" />
+    <ClInclude Include="src\Math\GMMath.h" />
+    <ClInclude Include="src\Event\Input.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\Rendering\DXError\DXGetErrorDescription.inl" />
+    <None Include="src\Rendering\DXError\DXGetErrorString.inl" />
+    <None Include="src\Rendering\DXError\DXTrace.inl" />
   </ItemGroup>
 </Project>
