@@ -3,6 +3,32 @@
 #include <string>
 #include <sstream>
 
+#include "NativeWindow.h"
+#include "Rendering/DXError/dxerr.h"
+
+#ifdef GM_DEBUG
+#define HR(hrcall) \
+{ \
+	HRESULT hr = hrcall; \
+	if(FAILED(hr)) \
+	{ \
+		DXTraceA(__FILE__, __LINE__, hr, #hrcall, true); \
+	} \
+}
+
+#define HR_MSG(hrcall, msg) \
+{ \
+	HRESULT hr = hrcall; \
+	if(FAILED(hr)) \
+	{ \
+		DXTraceA(__FILE__, __LINE__, hr, std::string(#hrcall).append("\nError msg: ").append(msg).c_str(), true); \
+	} \
+}
+#else
+#define HR(hrcall) hrcall;
+#define HR_MSG(hrcall,)
+#endif // GM_DEBUG
+
 namespace GM
 {
 	class GMException : public std::exception

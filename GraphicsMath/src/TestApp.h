@@ -5,7 +5,10 @@
 #include "Event/ApplicationEvent.h"
 #include "ImGui/ImGuiManager.h"
 #include "Math/Types.h"
+#include "Rendering/Camera.h"
+#include "Utils/FPSCamController.h"
 
+#include <array>
 #include <d3d11.h>
 #include <DirectXMath.h>
 #include <wrl.h>
@@ -30,9 +33,9 @@ private:
 	void SetRendererStates();
 	void SetShaders();
 	void SetBuffers();
-	void UpdateViewProjection();
 
 	void DrawWorldGrid();
+	void DrawCameraFrustum();
 
 	std::unique_ptr<GM::Window> m_window;
 	std::unique_ptr<GM::ImGuiManager> m_imguiManager;
@@ -53,9 +56,11 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11VertexShader> m_vs;
 	Microsoft::WRL::ComPtr<ID3D11PixelShader> m_ps;
 	Microsoft::WRL::ComPtr<ID3D11VertexShader> m_wgVS;
+	Microsoft::WRL::ComPtr<ID3D11VertexShader> m_colorVS;
 	Microsoft::WRL::ComPtr<ID3D11PixelShader> m_colorPS;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> m_inputLayout;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> m_wgInputLayout;
+	Microsoft::WRL::ComPtr<ID3D11InputLayout> m_colorInputLayout;
 
 	Microsoft::WRL::ComPtr<ID3D11Buffer> m_vb;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> m_ib;
@@ -64,24 +69,18 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11Buffer> m_basicVSSysCBuf;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> m_basicVSEntCBuf;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> m_wgVSSysCBuf;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> m_colorVSSysCBuf;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> m_colorVSEntCBuf;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> m_colorPSEntCBuf;
 
-	DirectX::XMFLOAT4X4 m_viewProjection;
-
-	GM::Vector m_camPos = GM::Vector(0.0f, 0.0f, -8.0f, 0.0f);
-	GM::Vector m_camRot;
+	std::array<GM::Camera, 2> m_cameras;
+	GM::Utils::FPSCamController m_fpsCamController;
 
 	GM::Vector m_cubePos;
 	GM::Vector m_cubeRot;
 	GM::Vector m_cubeSca = GM::Vector(1.0, 1.0f, 1.0f, 0.0f);
 
-	bool m_useXM = false;
+	int m_activeCamera = 0;
 	bool m_showGrid = false;
-
-
-	// temps
-	GM::Vector t_maxPos = GM::Vector(3.0f, 5.0f, 0.0f, 0.0f);
-	GM::Vector t_minPos = GM::Vector(3.0f, -5.0f, 0.0f, 0.0f);
-	float t_t = 0.0f;
 
 };

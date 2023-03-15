@@ -17,6 +17,10 @@
     <ClCompile Include="src\Utils\TextReader.cpp" />
     <ClCompile Include="src\Utils\BasicMesh.cpp" />
     <ClCompile Include="src\Event\Input.cpp" />
+    <ClCompile Include="src\Rendering\Camera.cpp" />
+    <ClCompile Include="src\Math\Functions.cpp" />
+    <ClCompile Include="src\Math\Operators.cpp" />
+    <ClCompile Include="src\Utils\FPSCamController.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\NativeWindow.h" />
@@ -38,6 +42,9 @@
     <ClInclude Include="src\Utils\BasicMesh.h" />
     <ClInclude Include="src\Math\GMMath.h" />
     <ClInclude Include="src\Event\Input.h" />
+    <ClInclude Include="src\Math\GeomFunctions.h" />
+    <ClInclude Include="src\Rendering\Camera.h" />
+    <ClInclude Include="src\Utils\FPSCamController.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\Rendering\DXError\DXGetErrorDescription.inl" />

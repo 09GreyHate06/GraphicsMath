@@ -1,7 +1,6 @@
 #include "TestApp.h"
 
 #include <d3dcompiler.h>
-#include "Rendering/DXError/dxerr.h"
 #include "Utils/TextReader.h"
 #include "Utils/BasicMesh.h"
 #include "Math/Operators.h"
@@ -14,28 +13,7 @@ using namespace Microsoft::WRL;
 
 using namespace DirectX;
 
-#ifdef GM_DEBUG
-#define HR(hrcall) \
-{ \
-	HRESULT hr = hrcall; \
-	if(FAILED(hr)) \
-	{ \
-		DXTraceA(__FILE__, __LINE__, hr, #hrcall, true); \
-	} \
-}
 
-#define HR_MSG(hrcall, msg) \
-{ \
-	HRESULT hr = hrcall; \
-	if(FAILED(hr)) \
-	{ \
-		DXTraceA(__FILE__, __LINE__, hr, std::string(#hrcall).append("\nError msg: ").append(msg).c_str(), true); \
-	} \
-}
-#else
-#define HR(hrcall) hrcall;
-#define HR_MSG(hrcall,)
-#endif // GM_DEBUG
 
 TestApp::TestApp()
 {
@@ -126,14 +104,24 @@ TestApp::TestApp()
 	m_context->RSSetViewports(1, &vp);
 
 	m_imguiManager = std::make_unique<ImGuiManager>(m_window.get(), m_device.Get(), m_context.Get());
-
-
 	
 	SetRendererStates();
 	SetShaders();
 	SetBuffers();
 
-	UpdateViewProjection();
+
+	CameraDesc desc = {};
+	desc.fov = 45.0f;
+	desc.width = (float)m_window->GetDesc().width;
+	desc.height = (float)m_window->GetDesc().height;
+	desc.nearZ = 0.1f;
+	desc.farZ = 1000.0f;
+	desc.position = Vector(0.0f, 0.0f, -8.0f, 1.0f);
+	desc.rotation = Vector(0.0f, 0.0f, 0.0f, 0.0f);
+	m_cameras[0].Set(desc, m_device.Get());
+	m_cameras[1].Set(desc, m_device.Get());
+
+	m_fpsCamController.Set(&m_cameras[m_activeCamera], m_window.get(), 0.5f, 0.5f);
 }
 
 void TestApp::Run()
@@ -153,11 +141,13 @@ void TestApp::OnEvent(GM::Event& event)
 {
 	EventDispatcher e(event);
 	e.Dispatch<WindowResizeEvent>(GM_BIND_EVENT_FN(OnWindowResizedEvent));
+
+	m_fpsCamController.OnEvent(event);
 }
 
 void TestApp::OnUpdate()
 {
-
+	m_fpsCamController.OnUpdate();
 }
 
 void TestApp::OnRender()
@@ -185,20 +175,15 @@ void TestApp::OnRender()
 		m_context->VSSetConstantBuffers(0, 1, m_basicVSSysCBuf.GetAddressOf());
 		D3D11_MAPPED_SUBRESOURCE msr = {};
 		HR(m_context->Map(m_basicVSSysCBuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &msr));
-		memcpy(msr.pData, &m_viewProjection, sizeof(XMFLOAT4X4));
+		memcpy(msr.pData, &MatTranspose(m_cameras[m_activeCamera].GetViewProjection()), sizeof(Matrix));
 		m_context->Unmap(m_basicVSSysCBuf.Get(), 0);
 	}
-	
+
 	// Set basic.vs Entity CBuf
-	if(!m_useXM)
 	{
 		m_context->VSSetConstantBuffers(1, 1, m_basicVSEntCBuf.GetAddressOf());
-		//Quaternion rotQuat = QuatRotationRollPitchYaw(ToRadians(m_cubeRot.x), ToRadians(m_cubeRot.y), ToRadians(m_cubeRot.z));
+		Quaternion rotQuat = QuatRotationRollPitchYaw(ToRadians(m_cubeRot.x), ToRadians(m_cubeRot.y), ToRadians(m_cubeRot.z));
 
-		Quaternion q1 = QuatRotationRollPitchYaw(0.0f, 0.0f, 0.0f);
-		Quaternion q2 = QuatRotationRollPitchYaw(ToRadians(90.0f), 0.0f, 0.0f);
-		Quaternion rotQuat = QuatSlerp(q1, q2, t_t);
-		std::cout << rotQuat << '\n';
 		Matrix transform =
 			MatScale(m_cubeSca.x, m_cubeSca.y, m_cubeSca.z) *
 			MatRotationQuaternion(rotQuat) *
@@ -207,23 +192,6 @@ void TestApp::OnRender()
 		D3D11_MAPPED_SUBRESOURCE msr = {};
 		HR(m_context->Map(m_basicVSEntCBuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &msr));
 		memcpy(msr.pData, &MatTranspose(transform), sizeof(Matrix));
-		m_context->Unmap(m_basicVSEntCBuf.Get(), 0);
-	}
-	else
-	// Set basic.vs Entity CBuf
-	{
-		m_context->VSSetConstantBuffers(1, 1, m_basicVSEntCBuf.GetAddressOf());
-		XMVECTOR rotQuat = XMQuaternionRotationRollPitchYaw(ToRadians(m_cubeRot.x), ToRadians(m_cubeRot.y), ToRadians(m_cubeRot.z));
-		XMMATRIX xmTransform =
-			XMMatrixScaling(m_cubeSca.x, m_cubeSca.y, m_cubeSca.z) *
-			XMMatrixRotationQuaternion(rotQuat) *
-			XMMatrixTranslation(m_cubePos.x, m_cubePos.y, m_cubePos.z);
-	
-		XMFLOAT4X4 transform;
-		XMStoreFloat4x4(&transform, XMMatrixTranspose(xmTransform));
-		D3D11_MAPPED_SUBRESOURCE msr = {};
-		HR(m_context->Map(m_basicVSEntCBuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &msr));
-		memcpy(msr.pData, &transform, sizeof(Matrix));
 		m_context->Unmap(m_basicVSEntCBuf.Get(), 0);
 	}
 
@@ -237,7 +205,7 @@ void TestApp::OnRender()
 	}
 
 	m_context->DrawIndexed(36, 0, 0);
-
+	DrawCameraFrustum();
 
 	if (m_showGrid)
 	{
@@ -250,7 +218,6 @@ void TestApp::OnImGuiRender()
 	m_imguiManager->Begin();
 
 	ImGui::Begin("Cube Transform");
-	ImGui::Checkbox("Use XM", &m_useXM);
 	ImGui::DragFloat3("Position", &m_cubePos[0], 0.1f);
 	ImGui::DragFloat3("Rotation", &m_cubeRot[0], 0.1f);
 	ImGui::DragFloat3("Scale", &m_cubeSca[0], 0.1f);
@@ -261,16 +228,35 @@ void TestApp::OnImGuiRender()
 	ImGui::End();
 
 	ImGui::Begin("Camera");
-	if (ImGui::DragFloat3("Position", &m_camPos[0], 0.1f) ||
-		ImGui::DragFloat3("Rotation", &m_camRot[0], 0.1f))
+	const char* items = " 1\0 2";
+	if (ImGui::Combo("Active", &m_activeCamera, items))
 	{
-		UpdateViewProjection();
+		m_fpsCamController.SetCamera(&m_cameras[m_activeCamera]);
 	}
-	ImGui::End();
 
+	CameraDesc camDesc = m_cameras[m_activeCamera].GetDesc();
+	if (ImGui::DragFloat3("Position", &camDesc.position[0], 0.1f) ||
+		ImGui::DragFloat3("Rotation", &camDesc.rotation[0], 0.1f))
+	{
+		m_cameras[m_activeCamera].SetPosition(camDesc.position);
+		m_cameras[m_activeCamera].SetRotation(camDesc.rotation);
+	}
 
-	ImGui::Begin("Temp");
-	ImGui::DragFloat("t", &t_t, 0.01f, 0.0f, 1.0f);
+	if (ImGui::DragFloat("Fov", &camDesc.fov, 0.1f))
+	{
+		m_cameras[m_activeCamera].SetFov(camDesc.fov);
+	}
+
+	if (ImGui::DragFloat2("Size", &camDesc.width, 0.1f))
+	{
+		m_cameras[m_activeCamera].SetSize(camDesc.width, camDesc.height);
+	}
+
+	if (ImGui::DragFloat2("Near, Far", &camDesc.nearZ, 0.1f))
+	{
+		m_cameras[m_activeCamera].SetNearFarZ(camDesc.nearZ, camDesc.farZ);
+	}
+
 	ImGui::End();
 
 	m_imguiManager->End();
@@ -325,7 +311,8 @@ bool TestApp::OnWindowResizedEvent(GM::WindowResizeEvent& e)
 	dsvDesc.Texture2D.MipSlice = 0;
 	HR(m_device->CreateDepthStencilView(tex.Get(), &dsvDesc, &m_dsv));
 
-	UpdateViewProjection();
+	m_cameras[0].SetSize((float)e.GetWidth(), (float)e.GetHeight());
+	m_cameras[1].SetSize((float)e.GetWidth(), (float)e.GetHeight());
 	
 	return false;
 }
@@ -334,7 +321,6 @@ void TestApp::SetRendererStates()
 {
 	{
 		D3D11_RASTERIZER_DESC desc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
-		desc.CullMode = D3D11_CULL_NONE;
 		HR(m_device->CreateRasterizerState(&desc, &m_rsState));
 	}
 
@@ -401,6 +387,23 @@ void TestApp::SetShaders()
 			byteCode->GetBufferSize(), &m_wgInputLayout));
 	}
 
+	{
+		ComPtr<ID3DBlob> byteCode;
+		ComPtr<ID3DBlob> errorBlob;
+		std::string src = Utils::TextReader::Read("res/shaders/color.vs.hlsl");
+		HR_MSG(D3DCompile(src.data(), src.size(), nullptr, nullptr, nullptr, "main", "vs_4_0",
+			0, 0, &byteCode, &errorBlob), static_cast<const char*>(errorBlob->GetBufferPointer()));
+
+		HR(m_device->CreateVertexShader(byteCode->GetBufferPointer(), byteCode->GetBufferSize(), nullptr, &m_colorVS));
+
+		D3D11_INPUT_ELEMENT_DESC elementDescs[2] =
+		{
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		};
+
+		HR(m_device->CreateInputLayout(elementDescs, 1, byteCode->GetBufferPointer(),
+			byteCode->GetBufferSize(), &m_colorInputLayout));
+	}
 
 	{
 		ComPtr<ID3DBlob> byteCode;
@@ -582,6 +585,28 @@ void TestApp::SetBuffers()
 	{
 		D3D11_BUFFER_DESC desc = {};
 		desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		desc.ByteWidth = sizeof(Matrix);
+		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		desc.MiscFlags = 0;
+		desc.StructureByteStride = 0;
+		desc.Usage = D3D11_USAGE_DYNAMIC;
+		HR(m_device->CreateBuffer(&desc, nullptr, &m_colorVSSysCBuf));
+	}
+
+	{
+		D3D11_BUFFER_DESC desc = {};
+		desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		desc.ByteWidth = sizeof(Matrix);
+		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		desc.MiscFlags = 0;
+		desc.StructureByteStride = 0;
+		desc.Usage = D3D11_USAGE_DYNAMIC;
+		HR(m_device->CreateBuffer(&desc, nullptr, &m_colorVSEntCBuf));
+	}
+
+	{
+		D3D11_BUFFER_DESC desc = {};
+		desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 		desc.ByteWidth = sizeof(Vector);
 		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 		desc.MiscFlags = 0;
@@ -589,15 +614,6 @@ void TestApp::SetBuffers()
 		desc.Usage = D3D11_USAGE_DYNAMIC;
 		HR(m_device->CreateBuffer(&desc, nullptr, &m_colorPSEntCBuf));
 	}
-}
-
-void TestApp::UpdateViewProjection()
-{
-	XMMATRIX xmView = XMMatrixRotationQuaternion(XMQuaternionRotationRollPitchYaw(ToRadians(m_camRot.x), ToRadians(m_camRot.y), ToRadians(m_camRot.z))) *
-		XMMatrixTranslation(m_camPos.x, m_camPos.y, m_camPos.z);
-	xmView = XMMatrixInverse(nullptr, xmView);
-	XMMATRIX xmProjection = XMMatrixPerspectiveFovLH(ToRadians(45.0f), (float)m_window->GetDesc().width / m_window->GetDesc().height, 0.1f, 1000.0f);
-	XMStoreFloat4x4(&m_viewProjection, XMMatrixTranspose(xmView * xmProjection));
 }
 
 void TestApp::DrawWorldGrid()
@@ -613,7 +629,7 @@ void TestApp::DrawWorldGrid()
 		m_context->VSSetConstantBuffers(0, 1, m_wgVSSysCBuf.GetAddressOf());
 		D3D11_MAPPED_SUBRESOURCE msr = {};
 		HR(m_context->Map(m_wgVSSysCBuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &msr));
-		memcpy(msr.pData, &m_viewProjection, sizeof(XMFLOAT4X4));
+		memcpy(msr.pData, &MatTranspose(m_cameras[m_activeCamera].GetViewProjection()), sizeof(Matrix));
 		m_context->Unmap(m_wgVSSysCBuf.Get(), 0);
 	}
 
@@ -637,4 +653,57 @@ void TestApp::DrawWorldGrid()
 	}
 
 	m_context->DrawIndexed(80, 0, 0);
+}
+
+void TestApp::DrawCameraFrustum()
+{
+	m_context->VSSetShader(m_colorVS.Get(), nullptr, 0);
+	m_context->PSSetShader(m_colorPS.Get(), nullptr, 0);
+	m_context->IASetInputLayout(m_colorInputLayout.Get());
+
+	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+
+	// Set world_grid.vs System CBuf
+	{
+		m_context->VSSetConstantBuffers(0, 1, m_colorVSSysCBuf.GetAddressOf());
+		D3D11_MAPPED_SUBRESOURCE msr = {};
+		HR(m_context->Map(m_colorVSSysCBuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &msr));
+		memcpy(msr.pData, &MatTranspose(m_cameras[m_activeCamera].GetViewProjection()), sizeof(Matrix));
+		m_context->Unmap(m_colorVSSysCBuf.Get(), 0);
+	}
+
+	// Set world_grid.vs System CBuf
+	{
+		CameraDesc cam = m_cameras[!m_activeCamera].GetDesc();
+		Quaternion rotQuat = QuatRotationRollPitchYaw(ToRadians(cam.rotation.x), ToRadians(cam.rotation.y), ToRadians(cam.rotation.z));
+		Matrix transform = MatRotationQuaternion(rotQuat) * MatTranslate(cam.position.x, cam.position.y, cam.position.z);
+
+		m_context->VSSetConstantBuffers(1, 1, m_colorVSEntCBuf.GetAddressOf());
+		D3D11_MAPPED_SUBRESOURCE msr = {};
+		HR(m_context->Map(m_colorVSEntCBuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &msr));
+		memcpy(msr.pData, &MatTranspose(transform), sizeof(Matrix));
+		m_context->Unmap(m_colorVSEntCBuf.Get(), 0);
+	}
+
+	// Set color.ps ent cbuf
+	{
+		Vector color(0.5f, 0.0f, 0.0f, 1.0f);
+		m_context->PSSetConstantBuffers(0, 1, m_colorPSEntCBuf.GetAddressOf());
+		D3D11_MAPPED_SUBRESOURCE msr = {};
+		HR(m_context->Map(m_colorPSEntCBuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &msr));
+		memcpy(msr.pData, &color, sizeof(Vector));
+		m_context->Unmap(m_colorPSEntCBuf.Get(), 0);
+	}
+
+	// Set Vertex and Index Buffer
+	{
+		const uint32_t offset = 0;
+		const uint32_t stride = 3 * sizeof(float);
+		auto vb = m_cameras[!m_activeCamera].GetFrustumVB();
+		m_context->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
+
+		m_context->IASetIndexBuffer(m_cameras[!m_activeCamera].GetFrustumIB(), DXGI_FORMAT_R32_UINT, 0);
+	}
+
+	m_context->DrawIndexed(75, 0, 0);
 }

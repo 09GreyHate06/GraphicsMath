@@ -98,9 +98,13 @@
     <ClCompile Include="src\ImGui\ImGuiBuild.cpp" />
     <ClCompile Include="src\ImGui\ImGuiManager.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Math\Functions.cpp" />
+    <ClCompile Include="src\Math\Operators.cpp" />
+    <ClCompile Include="src\Rendering\Camera.cpp" />
     <ClCompile Include="src\Rendering\DXError\dxerr.cpp" />
     <ClCompile Include="src\TestApp.cpp" />
     <ClCompile Include="src\Utils\BasicMesh.cpp" />
+    <ClCompile Include="src\Utils\FPSCamController.cpp" />
     <ClCompile Include="src\Utils\TextReader.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -121,12 +125,15 @@
     <ClInclude Include="src\Event\MouseEvent.h" />
     <ClInclude Include="src\ImGui\ImGuiManager.h" />
     <ClInclude Include="src\Math\Functions.h" />
+    <ClInclude Include="src\Math\GeomFunctions.h" />
     <ClInclude Include="src\Math\GMMath.h" />
     <ClInclude Include="src\Math\Operators.h" />
     <ClInclude Include="src\Math\Types.h" />
+    <ClInclude Include="src\Rendering\Camera.h" />
     <ClInclude Include="src\Rendering\DXError\dxerr.h" />
     <ClInclude Include="src\TestApp.h" />
     <ClInclude Include="src\Utils\BasicMesh.h" />
+    <ClInclude Include="src\Utils\FPSCamController.h" />
     <ClInclude Include="src\Utils\TextReader.h" />
   </ItemGroup>
   <ItemGroup>

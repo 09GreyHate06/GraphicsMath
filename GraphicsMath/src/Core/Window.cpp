@@ -92,6 +92,16 @@ namespace GM
 		m_eventCallbackFn = callback;
 	}
 
+	void Window::HideCursor()
+	{
+		while (::ShowCursor(FALSE) >= 0);
+	}
+
+	void Window::ShowCursor()
+	{
+		while (::ShowCursor(TRUE) < 0);
+	}
+
 	const WindowDesc& Window::GetDesc() const
 	{
 		return m_desc;

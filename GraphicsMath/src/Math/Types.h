@@ -15,12 +15,12 @@ namespace GM
 		};
 
 		Vector(float x, float y, float z, float w)
-			: x(x), y(y), z(z), w(w)
+			: f{ x, y, z, w }
 		{
 		}
 
 		Vector()
-			: x(0.0f), y(0.0f), z(0.0f), w(0.0f)
+			: f{ 0.0f, 0.0f, 0.0f, 0.0f }
 		{
 		}
 
@@ -60,7 +60,7 @@ namespace GM
 		{
 		}
 
-		constexpr Matrix(
+		Matrix(
 			const Vector& _0,
 			const Vector& _1,
 			const Vector& _2,
@@ -92,5 +92,21 @@ namespace GM
 		{
 			return v[i];
 		}
+	};
+
+
+	/// <summary>
+	/// struct of frustum planes put in a vector
+	/// (x y z) components as the normal
+	/// w component as the distance from origin plane
+	/// </summary>
+	struct Frustum
+	{
+		Vector left;
+		Vector right;
+		Vector bottom;
+		Vector top;
+		Vector nearZ;
+		Vector farZ;
 	};
 }

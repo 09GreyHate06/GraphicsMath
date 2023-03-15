@@ -64,7 +64,7 @@ namespace GM
 
 		void SetName(const std::string& name);
 		void SetEventCallback(const EventCallbackFn& callback);
-		
+
 		const WindowDesc& GetDesc() const;
 		const WindowState& GetState() const;
 		HWND GetNativeWindow() const;
@@ -72,6 +72,8 @@ namespace GM
 		void Close();
 
 		static void PollEvents();
+		static void HideCursor();
+		static void ShowCursor();
 
 		operator HWND();
 
